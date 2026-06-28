@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arc Slicer</title>
+<style>
+  *{box-sizing:border-box}
+  ::selection{background:rgba(201,100,66,.22)}
+  html,body{margin:0;height:100%}
+  body{
+    background:radial-gradient(120% 90% at 50% -10%,#F3EFE6 0%,#EDE9DF 60%);
+    font-family:-apple-system,'Segoe UI',system-ui,sans-serif;
+    color:#23211E;
+    -webkit-font-smoothing:antialiased;
+  }
+  @keyframes acRise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @keyframes acBlink{0%,100%{opacity:1}50%{opacity:.25}}
+
+  .wrap{min-height:100%;display:flex;align-items:flex-start;justify-content:center;padding:28px 22px}
+  .win{width:100%;max-width:700px;background:#FAF9F5;border:1px solid #E9E5DA;border-radius:16px;overflow:hidden;
+       box-shadow:0 24px 60px rgba(40,33,28,.16),0 2px 6px rgba(40,33,28,.07)}
+
+  .titlebar{display:flex;align-items:center;gap:8px;padding:13px 17px;background:#F1EEE6;border-bottom:1px solid #E7E3D8;-webkit-user-select:none;user-select:none}
+  .dot{width:12px;height:12px;border-radius:50%}
+  .title{flex:1;text-align:center;margin-right:54px;font-size:12.5px;font-weight:500;color:#8A857A}
+
+  .body{padding:30px 36px 28px}
+  h1{font-weight:600;font-size:28px;letter-spacing:-.01em;margin:0 0 6px}
+  .sub{margin:0 0 22px;color:#6E6B63;font-size:14.5px;line-height:1.55}
+
+  /* songs dir row */
+  .dirrow{display:flex;align-items:center;gap:10px;background:#F2EFE7;border:1px solid #E7E3D8;border-radius:12px;padding:10px 14px;margin-bottom:14px}
+  .dirlbl{font-size:11px;font-weight:600;letter-spacing:.06em;color:#9A968C;white-space:nowrap}
+  .dirpath{flex:1;font-size:12.5px;color:#3A372F;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:'Consolas','JetBrains Mono',monospace}
+  .dirbtn{flex-shrink:0;font-family:inherit;font-size:12px;font-weight:600;background:#FAF9F5;border:1px solid #D8D2C4;border-radius:8px;color:#3A372F;padding:6px 12px;cursor:pointer;transition:all .15s}
+  .dirbtn:hover{background:#F0ECE2;border-color:#C96442;color:#C96442}
+
+  /* drop zone */
+  .dropzone{border:1.5px dashed #D8D2C4;border-radius:12px;padding:13px 18px;margin-bottom:18px;cursor:pointer;
+            display:flex;align-items:center;gap:12px;transition:all .18s;background:#FBFAF6}
+  .dropzone:hover,.dropzone.drag-over{border-color:#C96442;background:#FBF1EC}
+  .dropzone .icon{font-size:20px;opacity:.7}
+  .dropzone .dz-text{font-size:13.5px;font-weight:600;color:#6E6B63}
+  .dropzone .dz-sub{font-size:11.5px;color:#9A968C;margin-top:2px}
+
+  .topbar{display:flex;gap:12px;background:#F2EFE7;border:1px solid #E7E3D8;border-radius:14px;padding:13px;margin-bottom:24px}
+  .field{display:flex;flex-direction:column;gap:7px}
+  .lbl{font-size:11px;letter-spacing:.06em;font-weight:600;color:#9A968C}
+  .sel-wrap{position:relative}
+  select,input{font-family:inherit;outline:none;color:#23211E;transition:border-color .15s,box-shadow .15s}
+  select{appearance:none;-webkit-appearance:none;width:100%;background:#FFF;border:1px solid #E4DFD2;border-radius:9px;padding:10px 32px 10px 12px;font-size:14px;font-weight:500;cursor:pointer}
+  .caret{position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:#9A968C;font-size:10px}
+  select:focus,input:focus{border-color:#C96442;box-shadow:0 0 0 3px rgba(201,100,66,.13)}
+
+  .seg-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+  .seg-head .h{font-size:13px;font-weight:700;color:#3A372F;letter-spacing:.02em}
+  .seg-head .hint{font-size:12px;color:#9A968C}
+
+  #segs{display:flex;flex-direction:column;gap:11px}
+  .seg{display:flex;align-items:flex-end;gap:12px;background:#FFF;border:1px solid #EAE6DC;border-radius:12px;padding:14px 16px;
+       box-shadow:0 1px 2px rgba(40,33,28,.04);transition:box-shadow .18s,transform .18s,border-color .18s;animation:acRise .22s ease both}
+  .seg:hover{box-shadow:0 7px 20px rgba(40,33,28,.09);transform:translateY(-1px)}
+  .seg.bad{border-color:#E6B5A8}
+  .badge{flex-shrink:0;width:28px;height:28px;border-radius:8px;background:#F6E9E2;color:#C96442;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-bottom:2px}
+  .seg .field .lbl{font-size:10.5px;letter-spacing:.05em}
+  .seg input{width:110px;background:#F7F5EE;border:1px solid #E4DFD2;border-radius:9px;padding:9px 11px;font-size:14px;font-family:'Consolas','JetBrains Mono',monospace}
+  .arrow{color:#C9C4B8;font-size:15px;margin-bottom:9px}
+  .dur{font-family:'Consolas','JetBrains Mono',monospace;font-size:13px;font-weight:500;color:#9A968C;white-space:nowrap;margin-bottom:9px}
+  .dur.bad{color:#C1573F}
+  .del{margin-left:auto;flex-shrink:0;width:30px;height:30px;border-radius:8px;background:#F7F5EE;border:1px solid #EAE6DC;color:#B0584A;font-size:12px;cursor:pointer;margin-bottom:2px;transition:all .15s;font-family:inherit}
+  .del:hover{background:#FBECE8;border-color:#E6907A}
+
+  .add{margin-top:12px;width:100%;background:#FBFAF6;border:1.5px dashed #D8D2C4;border-radius:12px;padding:13px;color:#8A857A;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s}
+  .add:hover{border-color:#C96442;color:#C96442;background:#FBF1EC}
+
+  .actions{display:flex;align-items:center;gap:10px;margin-top:22px}
+  .btn{font-family:inherit;font-weight:600;cursor:pointer;transition:background .15s,transform .08s;border-radius:11px}
+  .btn:active{transform:translateY(1px)}
+  .btn-run{display:flex;align-items:center;gap:8px;background:#C96442;color:#fff;border:none;padding:12px 22px;font-size:14.5px;box-shadow:0 2px 9px rgba(201,100,66,.26)}
+  .btn-run:hover{background:#B5573A}
+  .btn-run[disabled]{cursor:default;opacity:.85}
+  .btn-sec{background:#F2EFE7;color:#3A372F;border:1px solid #E4DFD2;padding:12px 16px;font-size:14px}
+  .btn-sec:hover{background:#EAE6DB}
+  .tri{width:0;height:0;border-left:9px solid #fff;border-top:5px solid transparent;border-bottom:5px solid transparent}
+  .pulse{width:8px;height:8px;border-radius:50%;background:#fff;animation:acBlink 1s infinite}
+  #saved{color:#5E7A52;font-size:13px;font-weight:600;display:none}
+
+  #logwrap{margin-top:22px;background:#1F1E1B;border-radius:12px;padding:16px 18px;max-height:240px;overflow:auto;display:none}
+  #logwrap .h{font-size:11px;color:#8A857A;font-weight:600;letter-spacing:.09em;margin-bottom:9px}
+  .logline{font-family:'Consolas','JetBrains Mono',monospace;font-size:12.5px;line-height:1.75;white-space:pre-wrap;animation:acRise .2s ease both}
+
+  #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(8px);background:#2A2926;color:#E8E3D9;font-size:13px;font-weight:500;padding:9px 18px;border-radius:10px;opacity:0;pointer-events:none;transition:all .22s;white-space:nowrap}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="win">
+    <div class="titlebar">
+      <div class="dot" style="background:#E0816B"></div>
+      <div class="dot" style="background:#E6C36B"></div>
+      <div class="dot" style="background:#9FBE8C"></div>
+      <div class="title">Arc Slicer</div>
+    </div>
+    <div class="body">
+      <h1>准备切片</h1>
+      <p class="sub">选择曲目，标记想保留的时间段，然后运行切片器。</p>
+
+      <!-- songs 根目录 -->
+      <div class="dirrow">
+        <span class="dirlbl">SONGS 目录</span>
+        <span class="dirpath" id="dirpath">…</span>
+        <button class="dirbtn" id="btnDir">更改</button>
+      </div>
+
+      <!-- 添加谱面文件夹（拖放风格按钮） -->
+      <div class="dropzone" id="dropzone"
+           ondragover="event.preventDefault();this.classList.add('drag-over')"
+           ondragleave="this.classList.remove('drag-over')"
+           ondrop="handleDrop(event)">
+        <span class="icon">📂</span>
+        <div>
+          <div class="dz-text">将谱面文件夹拖入此处，或点击选择</div>
+          <div class="dz-sub">选择的文件夹将以快捷方式添加到 songs 目录</div>
+        </div>
+      </div>
+
+      <!-- 曲目 & 速度 -->
+      <div class="topbar">
+        <div class="field" style="flex:1">
+          <span class="lbl">曲目 SONG ID</span>
+          <div class="sel-wrap">
+            <select id="song"></select>
+            <span class="caret">▼</span>
+          </div>
+        </div>
+        <div class="field" style="width:124px">
+          <span class="lbl">速度 SPEED</span>
+          <input id="speed" inputmode="decimal" value="1.0" style="font-family:'Consolas','JetBrains Mono',monospace">
+        </div>
+      </div>
+
+      <div class="seg-head">
+        <span class="h" id="seghdr">时间段 · 0 段 · 共 0.0s</span>
+        <span class="hint">毫秒 · 对应 .aff 整数时间</span>
+      </div>
+
+      <div id="segs"></div>
+      <button class="add" id="add">＋ 添加时间段</button>
+
+      <div class="actions">
+        <button class="btn btn-run" id="run"><span class="tri"></span><span id="runlabel">运行切片</span></button>
+        <button class="btn btn-sec" id="save">保存</button>
+        <button class="btn btn-sec" id="open">打开输出</button>
+        <span id="saved">✓ 已保存</span>
+      </div>
+
+      <div id="logwrap">
+        <div class="h">日志 LOG</div>
+        <div id="log"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var state = {
+    songId: "",
+    speed: "1.0",
+    songs: [],
+    segments: [],
+    running: false,
+    songsDir: "",
+  };
+  var api = null;
+  var saveTimer = null;
+  var toastTimer = null;
+  var uid = function () { return "s" + Math.random().toString(36).slice(2, 9); };
+
+  var $song    = document.getElementById("song");
+  var $speed   = document.getElementById("speed");
+  var $segs    = document.getElementById("segs");
+  var $seghdr  = document.getElementById("seghdr");
+  var $run     = document.getElementById("run");
+  var $runlabel= document.getElementById("runlabel");
+  var $saved   = document.getElementById("saved");
+  var $logwrap = document.getElementById("logwrap");
+  var $log     = document.getElementById("log");
+  var $dirpath = document.getElementById("dirpath");
+  var $toast   = document.getElementById("toast");
+
+  // ── toast ─────────────────────────────────────────────────────────────────
+  function toast(msg) {
+    $toast.textContent = msg;
+    $toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { $toast.classList.remove("show"); }, 2400);
+  }
+
+  // ── log ───────────────────────────────────────────────────────────────────
+  var LOG_COLORS = { ok:"#A6C293", err:"#E6907A", muted:"#8A857A", normal:"#CDC8BC" };
+  function pushLog(text, kind) {
+    $logwrap.style.display = "block";
+    var d = document.createElement("div");
+    d.className = "logline";
+    d.style.color = LOG_COLORS[kind] || LOG_COLORS.normal;
+    d.textContent = text;
+    $log.appendChild(d);
+    $logwrap.scrollTop = $logwrap.scrollHeight;
+  }
+  function clearLog() { $log.innerHTML = ""; }
+
+  window.__arcLog  = function (text, kind) { pushLog(text, kind || "normal"); };
+  window.__arcDone = function (code) { setRunning(false); };
+
+  // ── header ────────────────────────────────────────────────────────────────
+  function refreshHeader() {
+    var total = 0;
+    state.segments.forEach(function (sg) {
+      var d = parseInt(sg.e, 10) - parseInt(sg.s, 10);
+      if (!isNaN(d) && d >= 0) total += d;
+    });
+    $seghdr.textContent = "时间段 · " + state.segments.length + " 段 · 共 " + (total / 1000).toFixed(1) + "s";
+  }
+
+  // ── segments ──────────────────────────────────────────────────────────────
+  function durInfo(sg) {
+    var d = parseInt(sg.e, 10) - parseInt(sg.s, 10);
+    if (isNaN(d)) return { text: "—", bad: false };
+    if (d < 0)    return { text: "⚠ 负数", bad: true };
+    return { text: (d / 1000).toFixed(2) + "s", bad: false };
+  }
+
+  function renderSegments() {
+    $segs.innerHTML = "";
+    state.segments.forEach(function (sg, i) {
+      var info = durInfo(sg);
+      var row  = document.createElement("div");
+      row.className = "seg" + (info.bad ? " bad" : "");
+      row.dataset.id = sg.id;
+      row.innerHTML =
+        '<div class="badge">' + (i + 1) + '</div>' +
+        '<div class="field"><span class="lbl">开始 START</span>' +
+          '<input class="start" inputmode="numeric" value="' + esc(sg.s) + '"></div>' +
+        '<span class="arrow">→</span>' +
+        '<div class="field"><span class="lbl">结束 END</span>' +
+          '<input class="end" inputmode="numeric" value="' + esc(sg.e) + '"></div>' +
+        '<span class="dur' + (info.bad ? " bad" : "") + '">' + info.text + '</span>' +
+        '<button class="del" title="删除">✕</button>';
+
+      var $start = row.querySelector(".start");
+      var $end   = row.querySelector(".end");
+      var $dur   = row.querySelector(".dur");
+
+      function onEdit() {
+        sg.s = $start.value;
+        sg.e = $end.value;
+        var di = durInfo(sg);
+        $dur.textContent = di.text;
+        $dur.className = "dur" + (di.bad ? " bad" : "");
+        row.className  = "seg" + (di.bad ? " bad" : "");
+        refreshHeader();
+      }
+      $start.addEventListener("input", onEdit);
+      $end.addEventListener("input", onEdit);
+      row.querySelector(".del").addEventListener("click", function () {
+        state.segments = state.segments.filter(function (x) { return x.id !== sg.id; });
+        renderSegments();
+        refreshHeader();
+      });
+      $segs.appendChild(row);
+    });
+  }
+
+  function esc(v) { return String(v).replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
+
+  // ── collect / save / run ──────────────────────────────────────────────────
+  function collect() {
+    return {
+      song_id: state.songId,
+      speed:   parseFloat($speed.value) || 1.0,
+      segments: state.segments.map(function (sg) {
+        return { s: parseInt(sg.s, 10) || 0, e: parseInt(sg.e, 10) || 0 };
+      }),
+    };
+  }
+
+  function flashSaved() {
+    $saved.style.display = "inline";
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () { $saved.style.display = "none"; }, 1900);
+  }
+
+  function doSave() {
+    var data = collect();
+    if (api) {
+      api.save_slides(data).then(function (r) {
+        pushLog("💾 已保存 → " + ((r && r.path) || "slides.json"), "ok");
+        flashSaved();
+      }).catch(function (e) { pushLog("✗ 保存失败: " + e, "err"); });
+    } else {
+      pushLog("💾 （浏览器预览·模拟）", "ok");
+      flashSaved();
+    }
+  }
+
+  function setRunning(on) {
+    state.running = on;
+    $run.disabled = on;
+    $runlabel.textContent = on ? "运行中…" : "运行切片";
+    $run.firstElementChild.className = on ? "pulse" : "tri";
+  }
+
+  function doRun() {
+    if (state.running) return;
+    var data = collect();
+    if (!data.song_id) { pushLog("✗ 请先选择曲目 Song ID", "err"); return; }
+    if (!data.segments.length) { pushLog("✗ 至少需要一个时间段", "err"); return; }
+    clearLog();
+    setRunning(true);
+    if (api) {
+      pushLog("▶ 开始切片…", "muted");
+      api.run_slicer(data).catch(function (e) {
+        pushLog("✗ " + e, "err");
+        setRunning(false);
+      });
+    } else {
+      simulateRun(data);
+    }
+  }
+
+  function simulateRun(data) {
+    var lines = [
+      { t: "  （浏览器预览·模拟）", k: "muted" },
+      { t: "  曲目=" + data.song_id + "  速度=" + data.speed, k: "muted" },
+    ];
+    data.segments.forEach(function (sg, i) {
+      lines.push({ t: "  ✓ out/songs/" + data.song_id + "_" + sg.s + "_" + sg.e + "/", k: "normal" });
+    });
+    lines.push({ t: "✓ 完成！", k: "ok" });
+    var i = 0;
+    (function step() {
+      if (i >= lines.length) { setRunning(false); return; }
+      pushLog(lines[i].t, lines[i].k);
+      i++;
+      setTimeout(step, 300 + Math.random() * 200);
+    })();
+  }
+
+  // ── songs dir ─────────────────────────────────────────────────────────────
+  function updateDirDisplay(p) {
+    state.songsDir = p || "";
+    $dirpath.textContent = p || "（未设置）";
+    $dirpath.title = p || "";
+  }
+
+  function refreshSongs() {
+    if (!api) return;
+    api.get_songs().then(function (songs) {
+      fillSongs(songs);
+    });
+  }
+
+  document.getElementById("btnDir").addEventListener("click", function () {
+    if (!api) return;
+    api.browse_songs_dir().then(function (r) {
+      if (r && r.ok) {
+        updateDirDisplay(r.songs_dir);
+        refreshSongs();
+        toast("✓ songs 目录已更新");
+      }
+    });
+  });
+
+  // ── drop zone ─────────────────────────────────────────────────────────────
+  window.handleDrop = function (e) {
+    e.preventDefault();
+    document.getElementById("dropzone").classList.remove("drag-over");
+    if (!api) return;
+    api.add_song_folder().then(function (r) {
+      if (r && r.ok) {
+        toast("✓ " + (r.msg || "已添加"));
+        refreshSongs();
+      } else if (r && r.msg) {
+        toast("✗ " + r.msg);
+      }
+    });
+  };
+
+  document.getElementById("dropzone").addEventListener("click", function () {
+    if (!api) { toast("请在应用内使用"); return; }
+    api.add_song_folder().then(function (r) {
+      if (r && r.ok) {
+        toast("✓ " + (r.msg || "已添加"));
+        refreshSongs();
+      } else if (r && r.msg) {
+        toast("✗ " + r.msg);
+      }
+    });
+  });
+
+  // ── populate song dropdown ─────────────────────────────────────────────────
+  function fillSongs(songs) {
+    state.songs = songs || [];
+    $song.innerHTML = "";
+    if (!state.songs.length) {
+      var o = document.createElement("option");
+      o.value = ""; o.textContent = "（songs 目录为空或未设置）";
+      $song.appendChild(o);
+      return;
+    }
+    state.songs.forEach(function (s) {
+      var o = document.createElement("option");
+      o.value = s; o.textContent = s;
+      $song.appendChild(o);
+    });
+    if (!state.songId || state.songs.indexOf(state.songId) < 0)
+      state.songId = state.songs[0];
+    $song.value = state.songId;
+  }
+
+  function applySlides(data) {
+    data = data || {};
+    state.speed = String(data.speed != null ? data.speed : "1.0");
+    $speed.value = state.speed;
+    if (data.song_id && state.songs.indexOf(data.song_id) >= 0) {
+      state.songId = data.song_id;
+      $song.value  = data.song_id;
+    }
+    var segs = (data.segments && data.segments.length) ? data.segments : [{ s: 0, e: 60000 }];
+    state.segments = segs.map(function (sg) {
+      return { id: uid(), s: String(sg.s != null ? sg.s : 0), e: String(sg.e != null ? sg.e : 60000) };
+    });
+    renderSegments();
+    refreshHeader();
+  }
+
+  // ── static controls ───────────────────────────────────────────────────────
+  $song.addEventListener("change", function () { state.songId = $song.value; });
+  $speed.addEventListener("change", function () { state.speed = $speed.value; });
+  document.getElementById("add").addEventListener("click", function () {
+    var last  = state.segments[state.segments.length - 1];
+    var start = last ? (parseInt(last.e, 10) || 0) + 1000 : 0;
+    state.segments.push({ id: uid(), s: String(start), e: String(start + 30000) });
+    renderSegments();
+    refreshHeader();
+  });
+  $run.addEventListener("click", doRun);
+  document.getElementById("save").addEventListener("click", doSave);
+  document.getElementById("open").addEventListener("click", function () {
+    if (api) api.open_out();
+    else toast("（浏览器预览·模拟）");
+  });
+
+  // ── default preview data ─────────────────────────────────────────────────
+  fillSongs(["fractureray", "testify", "tempestissimo"]);
+  applySlides({ song_id: "fractureray", speed: 1.0, segments: [{ s: 12500, e: 41200 }] });
+  updateDirDisplay("./songs");
+
+  // ── connect backend ───────────────────────────────────────────────────────
+  function connectBackend() {
+    api = window.pywebview.api;
+    Promise.all([
+      api.get_config(),
+      api.get_songs(),
+      api.get_slides(),
+    ]).then(function (res) {
+      var cfg   = res[0] || {};
+      var songs = res[1] || [];
+      var slides= res[2];
+      updateDirDisplay(cfg.songs_dir || "");
+      fillSongs(songs);
+      applySlides(slides);
+    }).catch(function (e) { pushLog("✗ 加载配置失败: " + e, "err"); });
+  }
+
+  if (window.pywebview && window.pywebview.api) {
+    connectBackend();
+  } else {
+    window.addEventListener("pywebviewready", connectBackend);
+  }
+})();
+</script>
+</body>
+</html>

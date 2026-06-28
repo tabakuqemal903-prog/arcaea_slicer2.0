@@ -1,0 +1,27 @@
+# PyInstaller
+build/
+dist/
+*.spec.bak
+
+# ffmpeg binary (too large for git)
+ffmpeg.exe
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# Runtime outputs
+out/
+slides.json
+config.json
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
