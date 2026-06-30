@@ -73,6 +73,8 @@ C_BADGE_BG = "#F6E9E2"
 
 # ─── AFF 切片逻辑 ─────────────────────────────────────────────────────────────
 
+_SMOOTHNESS_RE = re.compile(r"(true|false),[\d.]+(?=\))")
+
 _TIMING_RE = re.compile(
     r"^\s*timing\(([+-]?\d+),([+-]?\d+(?:\.\d+)?),([+-]?\d+(?:\.\d+)?)\);\s*$",
     re.IGNORECASE,
@@ -407,6 +409,9 @@ def do_slice(
 
         log_fn(f"  ✎ 谱面 {s}ms – {e}ms…", "normal")
         new_aff = slice_aff(in_aff.read_text(encoding="utf-8", errors="replace"), s, e, speed)
+        new_aff = "\n".join(
+            _SMOOTHNESS_RE.sub(r"\1", ln) for ln in new_aff.splitlines()
+        )
         (out_dir / "2.aff").write_text(new_aff, encoding="utf-8")
 
         frag = make_songlist_fragment(new_id, s, e, speed)
