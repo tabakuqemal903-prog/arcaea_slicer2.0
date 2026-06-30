@@ -342,13 +342,17 @@ def make_songlist_entry(
             "bg": meta["bg"],
             "date": int(time.time()),
             "version": meta["version"],
-            "difficulties": [{
-                "ratingClass": 2,
-                "chartDesigner": meta["chart_designer"],
-                "jacketDesigner": meta["jacket_designer"],
-                "rating": int(meta["rating"]),
-                "ratingPlus": bool(meta["rating_plus"]),
-            }],
+            "difficulties": [
+                {"ratingClass": 0, "chartDesigner": "", "jacketDesigner": "", "rating": 0, "ratingPlus": False},
+                {"ratingClass": 1, "chartDesigner": "", "jacketDesigner": "", "rating": 0, "ratingPlus": False},
+                {
+                    "ratingClass": 2,
+                    "chartDesigner": meta["chart_designer"],
+                    "jacketDesigner": meta["jacket_designer"],
+                    "rating": int(meta["rating"]),
+                    "ratingPlus": bool(meta["rating_plus"]),
+                },
+            ],
         }]
     }
 
