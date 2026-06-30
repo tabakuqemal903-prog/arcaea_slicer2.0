@@ -176,7 +176,8 @@ def _slice_line(line: str, s: int, e: int, start: int, speed: float) -> str | No
                 for tm in re.finditer(r"arctap\((\d+)\)", taps_blob, re.IGNORECASE)
                 if nt1 <= int(tm.group(1)) <= nt2
             ]
-            result += ("[" + ",".join(kept) + "]") if kept else "[]"
+            if kept:
+                result += "[" + ",".join(kept) + "]"
         return result + ";"
 
     return stripped
