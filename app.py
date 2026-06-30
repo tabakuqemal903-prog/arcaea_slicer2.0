@@ -396,6 +396,7 @@ def do_slice(
 
         if in_jpg.exists():
             shutil.copy2(in_jpg, out_dir / "base.jpg")
+            shutil.copy2(in_jpg, out_dir / "base_256.jpg")
 
         log_fn(f"  ♪ 音频 {s}ms – {e}ms  speed={speed}…", "normal")
         try:
