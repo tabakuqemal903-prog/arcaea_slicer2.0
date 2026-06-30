@@ -202,9 +202,11 @@ def _slice_block(lines: list[str], s: int, e: int, start: int, speed: float) -> 
                     if brace > 0:
                         inner.append(l2)
                     i += 1
-                out.append(hdr.split("{", 1)[0].rstrip() + "{")
-                out.extend(_slice_block(inner, s, e, start, speed))
-                out.append("};")
+                sliced_inner = _slice_block(inner, s, e, start, speed)
+                if sliced_inner:
+                    out.append(hdr.split("{", 1)[0].rstrip() + "{")
+                    out.extend(sliced_inner)
+                    out.append("};")
                 continue
         sliced = _slice_line(line, s, e, start, speed)
         if sliced is not None:
