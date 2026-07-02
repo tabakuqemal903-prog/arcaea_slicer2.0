@@ -204,6 +204,18 @@ def _slice_block(lines: list[str], s: int, e: int, start: int, speed: float) -> 
                     i += 1
                 sliced_inner = _slice_block(inner, s, e, start, speed)
                 if sliced_inner:
+                    # inject base timing if none survived the slice
+                    has_t = any(re.match(r"\s*timing\(", ln, re.IGNORECASE) for ln in sliced_inner)
+                    if not has_t:
+                        inner_timings = _parse_timings(inner)
+                        if inner_timings:
+                            chosen = inner_timings[0]
+                            for t in inner_timings:
+                                if t[0] <= s:
+                                    chosen = t
+                                else:
+                                    break
+                            sliced_inner.insert(0, f"timing(0,{chosen[1]:.2f},{chosen[2]:.2f});")
                     out.append(hdr.split("{", 1)[0].rstrip() + "{")
                     out.extend(sliced_inner)
                     out.append("};")
